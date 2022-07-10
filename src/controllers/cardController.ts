@@ -26,3 +26,14 @@ export async function cardActivation(req: Request, res: Response) {
     res.sendStatus(200);
 }
 
+export async function cardLockingUnlocking(req: Request, res: Response) {
+    const  cardId: number = parseInt(req.params.cardId);
+    const { password } : { password: string } = req.body;
+
+    if(!cardId){
+        throw {type: "badRequest", message: "Card's ID is a number!"}; 
+    }
+
+    const newStatus = await cardService.lockUnlockCard(cardId, password);
+    res.status(200).send(newStatus);
+}

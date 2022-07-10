@@ -95,7 +95,7 @@ async function cardExists(cardId: number){
     return card;
 }
 
-function cardIsNotExpired(expirationDate: string){
+function cardMustNotBeExpired(expirationDate: string){
     const expirationDateMMYY = expirationDate.split("/");
     const todayMMYY = generateExpirationDate(0).split("/");
     const yearsAhead = (todayMMYY[1] > expirationDateMMYY[1]);
@@ -115,16 +115,41 @@ function compareCVV(inputCardCVV: string, dbCardCVV: string){
     return;
 }
 
-function cardAlreadyActivated(password: string){
+function cardMustNotBeActivated(password: string){
     if(password){
         throw {type: "conflict", message: "This card is already activated!"}; 
     }
     return;
 }
 
+function cardMustBeActivated(password: string){
+    if(!password){
+        throw {type: "notAcceptable", message: "This card is not activated yet!"}; 
+    }
+    return;
+}
+
 async function saveNewPassword(cardId: number, cardNewPassword: string){
     const encryptedPassword = bcrypt.hashSync(cardNewPassword, cryptrUtil.bsalt);
-    await cardRespository.update(cardId, {password: encryptedPassword});
+    await cardRespository.update(cardId, {password: encryptedPassword, isBlocked: false});
+    return;
+}
+
+async function saveLockUnlock(cardId: number, currentStatus: boolean){
+    currentStatus = !currentStatus;
+    await cardRespository.update(cardId, { isBlocked: currentStatus});
+    const newStatus = {
+        status: currentStatus,
+        message: `Card is now ${currentStatus ? "locked" : "unlocked"}!`
+    };
+    return newStatus;
+}
+
+async function comparePassword(inputCardPassword: string, dbCardPassword: string){
+    const correctPassword = await bcrypt.compare(inputCardPassword, dbCardPassword);
+    if(!correctPassword){
+        throw {type: "unauthorized", message: "Invalid password!"}; 
+    }
     return;
 }
 
@@ -140,9 +165,18 @@ export async function createCard(x_api_key: string, employeeId: number, cardType
 
 export async function activateCard(cardId: number, cardNewPassword: string, cardCVV: string) {
     const card = await cardExists(cardId);
-    cardIsNotExpired(card.expirationDate);
+    cardMustNotBeExpired(card.expirationDate);
     compareCVV(cardCVV, card.securityCode);
-    cardAlreadyActivated(card.password);
+    cardMustNotBeActivated(card.password);
     await saveNewPassword(card.id, cardNewPassword);
     return;
+}
+
+export async function lockUnlockCard(cardId: number, password: string) {
+    const card = await cardExists(cardId);
+    await comparePassword(password, card.password);
+    cardMustBeActivated(card.password);
+    cardMustNotBeExpired(card.expirationDate);
+    const newStatus = await saveLockUnlock(card.id, card.isBlocked);
+    return newStatus;
 }

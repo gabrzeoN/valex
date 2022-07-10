@@ -39,10 +39,7 @@ export async function findById(id: number) {
   return result.rows[0];
 }
 
-export async function findByTypeAndEmployeeId(
-  type: TransactionTypes,
-  employeeId: number
-) {
+export async function findByTypeAndEmployeeId(type: TransactionTypes, employeeId: number) {
   const result = await connection.query<Card, [TransactionTypes, number]>(
     `SELECT * FROM cards WHERE type=$1 AND "employeeId"=$2`,
     [type, employeeId]

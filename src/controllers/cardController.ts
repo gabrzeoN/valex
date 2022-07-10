@@ -13,3 +13,16 @@ export async function cardCreation(req: Request, res: Response) {
     const card = await cardService.createCard(x_api_key, employeeId, cardType);
     res.status(200).send(card);
 }
+
+export async function cardActivation(req: Request, res: Response) {
+    const  cardId: number = parseInt(req.params.cardId);
+    const { cardNewPassword, cardCVV } : { cardNewPassword: string, cardCVV: string } = req.body;
+
+    if(!cardId){
+        throw {type: "badRequest", message: "Card's ID is a number!"}; 
+    }
+
+    await cardService.activateCard(cardId, cardNewPassword, cardCVV);
+    res.sendStatus(200);
+}
+

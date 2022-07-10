@@ -1,8 +1,13 @@
 import { faker } from '@faker-js/faker';
 import Cryptr from "cryptr";
+import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+dotenv.config();
+
 import * as employeeRespository from "../repositories/employeeRepository.js";
 import * as companyRespository from "../repositories/companyRepository.js";
 import * as cardRespository from "../repositories/cardRepository.js";
+import * as cryptrUtil from "../utils/cryptrUtil.js";
 
 async function keyBelongsToCompany(x_api_key: string){
     const company = await companyRespository.findByApiKey(x_api_key);
@@ -35,9 +40,9 @@ async function employeeMustNotHaveThisCard(cardType: cardRespository.Transaction
     return;
 }
 
-function generateExpirationDate(){
+function generateExpirationDate(yearsValid: number = 5){
     const today = new Date();
-    today.setFullYear(today.getFullYear() + 5);
+    today.setFullYear(today.getFullYear() + yearsValid);
     let expirationDate: string = today.toLocaleDateString("pt-BR")
     let dayMouthYear = expirationDate.split("/");
     let expirationDateFormatted = `${dayMouthYear[1]}/${dayMouthYear[2][2]}${dayMouthYear[2][3]}`
@@ -58,18 +63,19 @@ function generateCardHolderName(employeeName: string){
     return holderNameFormatted;
 }
 
-function generateCVV(salt: string){
-    const cryptr = new Cryptr("secretCVV" + salt);
-    const encryptedString = cryptr.encrypt(faker.finance.creditCardCVV());
-    return encryptedString;
+function generateCVV(){
+    const cryptr = new Cryptr(cryptrUtil.salt);
+    const decryptedCVV = faker.finance.creditCardCVV();
+    const encryptedCVV = cryptr.encrypt(decryptedCVV);
+    return [decryptedCVV, encryptedCVV];
 }
 
-async function generateCard(cardType: cardRespository.TransactionTypes, employeeId: number, employeeName: string){
+async function generateCard(cardType: cardRespository.TransactionTypes, employeeId: number, employeeName: string, cvv: string){
     const cardData : cardRespository.CardInsertData = {
         employeeId,
         number: faker.finance.creditCardNumber("####-####-####-###L"),
         cardholderName: generateCardHolderName(employeeName),
-        securityCode: generateCVV(employeeName),
+        securityCode: cvv,
         expirationDate: generateExpirationDate(),
         password: null,
         isVirtual: false,
@@ -81,11 +87,62 @@ async function generateCard(cardType: cardRespository.TransactionTypes, employee
     return cardData;
 }
 
+async function cardExists(cardId: number){
+    const card = await cardRespository.findById(cardId);
+    if(!card){
+        throw {type: "unauthorized", message: "Card not register or invalid security code!"}; 
+    }
+    return card;
+}
+
+function cardIsNotExpired(expirationDate: string){
+    const expirationDateMMYY = expirationDate.split("/");
+    const todayMMYY = generateExpirationDate(0).split("/");
+    const yearsAhead = (todayMMYY[1] > expirationDateMMYY[1]);
+    const sameYearButMonthsAhead = (expirationDateMMYY[1] === todayMMYY[1] && todayMMYY[0] > expirationDateMMYY[0]);
+    if(yearsAhead || sameYearButMonthsAhead){
+        throw {type: "notAcceptable", message: "This card has already expired!"}; 
+    }
+    return;
+}
+
+function compareCVV(inputCardCVV: string, dbCardCVV: string){
+    const cryptr = new Cryptr(cryptrUtil.salt);
+    const decryptedDbCardCVV = cryptr.decrypt(dbCardCVV);
+    if(inputCardCVV !== decryptedDbCardCVV){
+        throw {type: "unauthorized", message: "Card not register or invalid security code!"}; 
+    }
+    return;
+}
+
+function cardAlreadyActivated(password: string){
+    if(password){
+        throw {type: "conflict", message: "This card is already activated!"}; 
+    }
+    return;
+}
+
+async function saveNewPassword(cardId: number, cardNewPassword: string){
+    const encryptedPassword = bcrypt.hashSync(cardNewPassword, cryptrUtil.bsalt);
+    await cardRespository.update(cardId, {password: encryptedPassword});
+    return;
+}
+
 export async function createCard(x_api_key: string, employeeId: number, cardType: cardRespository.TransactionTypes) {
     const company = await keyBelongsToCompany(x_api_key);
     const employee = await employeeIsRegister(employeeId);
     employeeWorksForCompany(company.id, employee.companyId);
     await employeeMustNotHaveThisCard(cardType, employeeId);
-    const card = await generateCard(cardType, employeeId, employee.fullName);
-    return card;
+    const [decryptedCVV, encryptedCVV]: string[] = generateCVV();
+    const card = await generateCard(cardType, employeeId, employee.fullName, encryptedCVV);
+    return {...card, securityCode: decryptedCVV};
+}
+
+export async function activateCard(cardId: number, cardNewPassword: string, cardCVV: string) {
+    const card = await cardExists(cardId);
+    cardIsNotExpired(card.expirationDate);
+    compareCVV(cardCVV, card.securityCode);
+    cardAlreadyActivated(card.password);
+    await saveNewPassword(card.id, cardNewPassword);
+    return;
 }

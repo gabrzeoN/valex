@@ -19,7 +19,7 @@ export async function cardActivation(req: Request, res: Response) {
     const { cardNewPassword, cardCVV } : { cardNewPassword: string, cardCVV: string } = req.body;
 
     if(!cardId){
-        throw {type: "badRequest", message: "Card's ID is a number!"}; 
+        throw {type: "badRequest", message: "Card's ID must be a number!"}; 
     }
 
     await cardService.activateCard(cardId, cardNewPassword, cardCVV);
@@ -31,7 +31,7 @@ export async function cardLockingUnlocking(req: Request, res: Response) {
     const { password } : { password: string } = req.body;
 
     if(!cardId){
-        throw {type: "badRequest", message: "Card's ID is a number!"}; 
+        throw {type: "badRequest", message: "Card's ID must be a number!"}; 
     }
 
     const newStatus = await cardService.lockUnlockCard(cardId, password);

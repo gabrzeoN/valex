@@ -9,7 +9,7 @@ import * as companyRespository from "../repositories/companyRepository.js";
 import * as cardRespository from "../repositories/cardRepository.js";
 import * as cryptrUtil from "../utils/cryptrUtil.js";
 
-async function keyBelongsToCompany(x_api_key: string){
+export async function keyBelongsToCompany(x_api_key: string){
     const company = await companyRespository.findByApiKey(x_api_key);
     if(!company){
         throw {type: "unauthorized", message: "Company key doesn't exist!"}; 
@@ -17,7 +17,7 @@ async function keyBelongsToCompany(x_api_key: string){
     return company;
 }
 
-async function employeeIsRegister(employeeId: number){
+export async function employeeIsRegister(employeeId: number){
     const employee = await employeeRespository.findById(employeeId);
     if(!employee){
         throw {type: "unauthorized", message: "Company key doesn't exist!"}; 
@@ -25,14 +25,14 @@ async function employeeIsRegister(employeeId: number){
     return employee;
 }
 
-function employeeWorksForCompany(companyId: number, employeeCompanyId: number){
+export function employeeWorksForCompany(companyId: number, employeeCompanyId: number){
     if(companyId !== employeeCompanyId){
         throw {type: "forbidden", message: "Employee doesn't work for this company!"}; 
     }
     return;
 }
 
-async function employeeMustNotHaveThisCard(cardType: cardRespository.TransactionTypes, employeeId: number){
+export async function employeeMustNotHaveThisCard(cardType: cardRespository.TransactionTypes, employeeId: number){
     const card = await cardRespository.findByTypeAndEmployeeId(cardType, employeeId);
     if(card){
         throw {type: "conflict", message: "Employee already has a card of this type!"};
@@ -87,7 +87,7 @@ async function generateCard(cardType: cardRespository.TransactionTypes, employee
     return cardData;
 }
 
-async function cardExists(cardId: number){
+export async function cardExists(cardId: number){
     const card = await cardRespository.findById(cardId);
     if(!card){
         throw {type: "unauthorized", message: "Card not register or invalid security code!"}; 
@@ -95,7 +95,7 @@ async function cardExists(cardId: number){
     return card;
 }
 
-function cardMustNotBeExpired(expirationDate: string){
+export function cardMustNotBeExpired(expirationDate: string){
     const expirationDateMMYY = expirationDate.split("/");
     const todayMMYY = generateExpirationDate(0).split("/");
     const yearsAhead = (todayMMYY[1] > expirationDateMMYY[1]);
@@ -106,7 +106,7 @@ function cardMustNotBeExpired(expirationDate: string){
     return;
 }
 
-function compareCVV(inputCardCVV: string, dbCardCVV: string){
+export function compareCVV(inputCardCVV: string, dbCardCVV: string){
     const cryptr = new Cryptr(cryptrUtil.salt);
     const decryptedDbCardCVV = cryptr.decrypt(dbCardCVV);
     if(inputCardCVV !== decryptedDbCardCVV){
@@ -115,27 +115,27 @@ function compareCVV(inputCardCVV: string, dbCardCVV: string){
     return;
 }
 
-function cardMustNotBeActivated(password: string){
+export function cardMustNotBeActivated(password: string){
     if(password){
         throw {type: "conflict", message: "This card is already activated!"}; 
     }
     return;
 }
 
-function cardMustBeActivated(password: string){
+export function cardMustBeActivated(password: string){
     if(!password){
         throw {type: "notAcceptable", message: "This card is not activated yet!"}; 
     }
     return;
 }
 
-async function saveNewPassword(cardId: number, cardNewPassword: string){
+export async function saveNewPassword(cardId: number, cardNewPassword: string){
     const encryptedPassword = bcrypt.hashSync(cardNewPassword, cryptrUtil.bsalt);
     await cardRespository.update(cardId, {password: encryptedPassword, isBlocked: false});
     return;
 }
 
-async function saveLockUnlock(cardId: number, currentStatus: boolean){
+export async function saveLockUnlock(cardId: number, currentStatus: boolean){
     currentStatus = !currentStatus;
     await cardRespository.update(cardId, { isBlocked: currentStatus});
     const newStatus = {
@@ -145,7 +145,7 @@ async function saveLockUnlock(cardId: number, currentStatus: boolean){
     return newStatus;
 }
 
-async function comparePassword(inputCardPassword: string, dbCardPassword: string){
+export async function comparePassword(inputCardPassword: string, dbCardPassword: string){
     const correctPassword = await bcrypt.compare(inputCardPassword, dbCardPassword);
     if(!correctPassword){
         throw {type: "unauthorized", message: "Invalid password!"}; 

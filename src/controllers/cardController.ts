@@ -3,8 +3,13 @@ import * as cardService from "./../services/cardService.js";
 import { TransactionTypes } from "../repositories/cardRepository.js";
 
 export async function cardCreation(req: Request, res: Response) {
-    const { employeeId, cardType } : { employeeId: number, cardType: TransactionTypes } = req.body;
+    const  employeeId: number = parseInt(req.params.employeeId);
+    const { cardType } : { cardType: TransactionTypes } = req.body;
     const x_api_key: string = req.headers["x-api-key"]?.toString();
+
+    if(!employeeId){
+        throw {type: "badRequest", message: "Employee's ID must be a number!"}; 
+    }
 
     if(!x_api_key){
         throw {type: "unauthorized", message: "Company key not found!"}; 
@@ -38,13 +43,13 @@ export async function cardLockingUnlocking(req: Request, res: Response) {
     res.status(200).send(newStatus);
 }
 
-export async function transactionRechargesListing(req: Request, res: Response) {
+export async function transactionListing(req: Request, res: Response) {
     const  cardId: number = parseInt(req.params.cardId);
 
     if(!cardId){
         throw {type: "badRequest", message: "Card's ID must be a number!"}; 
     }
 
-    const transactionsAndRecharges = await cardService.listTransactionRecharges(cardId);
-    res.status(200).send(transactionsAndRecharges);
+    const allTransactions = await cardService.listTransactions(cardId);
+    res.status(200).send(allTransactions);
 }

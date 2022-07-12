@@ -1,7 +1,6 @@
 import joi from "joi";
 
 export const creation = joi.object({
-    employeeId: joi.number().integer().positive().required(),
     cardType: joi.string().valid('groceries', 'restaurant', 'transport', 'education', 'health').required()
 });
 

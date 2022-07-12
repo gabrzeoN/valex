@@ -189,12 +189,21 @@ export async function lockUnlockCard(cardId: number, password: string) {
     return newStatus;
 }
 
-export async function listTransactionRecharges(cardId: number) {
+function mountTransactionsBalance(balance: number, transactionsList: paymentService.Transaction){
+    const transactionsAndBalance = {
+        balance,
+        transacions: transactionsList.payments,
+        recharges: transactionsList.recharges
+    }
+    return transactionsAndBalance;
+}
+
+export async function listTransactions(cardId: number) {
     const card = await cardExists(cardId);
     cardMustBeActivated(card.password);
     cardMustNotBeExpired(card.expirationDate);
-    // TODO: arrumar a func abaixo
-    await paymentService.checkCardBalance(cardId);
-    // const newStatus = await saveLockUnlock(card.id, card.isBlocked);
-    // return newStatus;
+    const transactionsList = await paymentService.getAllTransactions(cardId);
+    const balance = paymentService.checkCardBalance(transactionsList);
+    const transactionsAndBalance = mountTransactionsBalance(balance, transactionsList);
+    return transactionsAndBalance;
 }

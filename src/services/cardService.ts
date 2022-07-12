@@ -129,6 +129,13 @@ export function cardMustBeActivated(password: string){
     return;
 }
 
+export function cardMustNotBeLocked(lockStatus: boolean){
+    if(lockStatus){
+        throw {type: "notAcceptable", message: "This card is locked!"}; 
+    }
+    return;
+}
+
 export async function saveNewPassword(cardId: number, cardNewPassword: string){
     const encryptedPassword = bcrypt.hashSync(cardNewPassword, cryptrUtil.bsalt);
     await cardRespository.update(cardId, {password: encryptedPassword, isBlocked: false});

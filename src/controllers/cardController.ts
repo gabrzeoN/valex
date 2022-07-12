@@ -11,7 +11,7 @@ export async function cardCreation(req: Request, res: Response) {
     }
 
     const card = await cardService.createCard(x_api_key, employeeId, cardType);
-    res.status(200).send(card);
+    res.status(201).send(card);
 }
 
 export async function cardActivation(req: Request, res: Response) {

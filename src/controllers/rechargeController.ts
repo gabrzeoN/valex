@@ -15,5 +15,5 @@ export async function rechargeCreation(req: Request, res: Response) {
     }
 
     await rechargeService.createRecharge(x_api_key, cardId, amount);
-    res.status(200).send();
+    res.sendStatus(201);
 }

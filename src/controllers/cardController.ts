@@ -37,3 +37,14 @@ export async function cardLockingUnlocking(req: Request, res: Response) {
     const newStatus = await cardService.lockUnlockCard(cardId, password);
     res.status(200).send(newStatus);
 }
+
+export async function transactionRechargesListing(req: Request, res: Response) {
+    const  cardId: number = parseInt(req.params.cardId);
+
+    if(!cardId){
+        throw {type: "badRequest", message: "Card's ID must be a number!"}; 
+    }
+
+    const transactionsAndRecharges = await cardService.listTransactionRecharges(cardId);
+    res.status(200).send(transactionsAndRecharges);
+}

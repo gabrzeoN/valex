@@ -18,11 +18,24 @@ export function compareCardEstabTypes(cardType: string, establishmentType: strin
     return;
 }
 
-export async function checkCardBalance(cardId: number, amount: number){
+export async function checkNewCardBalance(cardId: number, amount: number){
     const allRecharges = await rechargeRepository.findByCardId(cardId);
     const allPayments = await paymentRepository.findByCardId(cardId);
     let allRechargesValue = 0;
     let allPaymentsValue = amount;
+    allRecharges.forEach(recharge => allRechargesValue += recharge.amount);
+    allPayments.forEach(payment => allPaymentsValue += payment.amount);
+    if(allPaymentsValue > allRechargesValue){
+        throw {type: "notAcceptable", message: "There is not enough credit for this transaction!"}; 
+    }
+    return;
+}
+// TODO: arrumar a func abaixo
+export async function checkCardBalance(cardId: number){
+    const allRecharges = await rechargeRepository.findByCardId(cardId);
+    const allPayments = await paymentRepository.findByCardId(cardId);
+    let allRechargesValue = 0;
+    let allPaymentsValue = 0;
     allRecharges.forEach(recharge => allRechargesValue += recharge.amount);
     allPayments.forEach(payment => allPaymentsValue += payment.amount);
     if(allPaymentsValue > allRechargesValue){
@@ -49,7 +62,7 @@ export async function createPayment(cardId: number, establishmentId: number, amo
     await cardService.comparePassword(password, card.password);
     const establishment = await establishmentIsRegister(establishmentId);
     compareCardEstabTypes(card.type, establishment.type);
-    await checkCardBalance(card.id, amount);
+    await checkNewCardBalance(card.id, amount);
     await savePayment(cardId, establishmentId, amount);
     return;
 }

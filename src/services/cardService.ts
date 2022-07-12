@@ -7,6 +7,7 @@ dotenv.config();
 import * as employeeRespository from "../repositories/employeeRepository.js";
 import * as companyRespository from "../repositories/companyRepository.js";
 import * as cardRespository from "../repositories/cardRepository.js";
+import * as paymentService from  "../services/paymentService.js"
 import * as cryptrUtil from "../utils/cryptrUtil.js";
 
 export async function keyBelongsToCompany(x_api_key: string){
@@ -186,4 +187,14 @@ export async function lockUnlockCard(cardId: number, password: string) {
     cardMustNotBeExpired(card.expirationDate);
     const newStatus = await saveLockUnlock(card.id, card.isBlocked);
     return newStatus;
+}
+
+export async function listTransactionRecharges(cardId: number) {
+    const card = await cardExists(cardId);
+    cardMustBeActivated(card.password);
+    cardMustNotBeExpired(card.expirationDate);
+    // TODO: arrumar a func abaixo
+    await paymentService.checkCardBalance(cardId);
+    // const newStatus = await saveLockUnlock(card.id, card.isBlocked);
+    // return newStatus;
 }
